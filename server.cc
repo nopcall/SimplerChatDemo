@@ -4,11 +4,28 @@
 #include <string.h>
 
 #include <iostream>
+#include <string>
+
+int
+Server::
+sqlConnect()
+{
+        _sql.connect(_databaseName, _sqlAddr, _sqlUserName, _sqlPassword);
+        return 0;
+}
 
 Server::
 Server(int port, int maxConnection)
         : _port(port), _maxConnection(maxConnection), _connected(0), onlineUser(NULL)
 {
+        // connect to mysql
+        _sqlAddr = "localhost";
+        _sqlUserName = "root";
+        _sqlPassword = "mysql";
+        _databaseName = "nChat";
+        sqlConnect();
+
+        // server
         initServer();
 }
 
@@ -30,8 +47,9 @@ initServer()
         bind(srvfd, (const struct sockaddr *)&srvAddr, sizeof(srvAddr));
 
         // listenning socketfd begin
-        listen(srvfd, _maxConnection);
-        std::cout << "listening ..." << std::endl;
+        if (listen(srvfd, _maxConnection) == 0) {
+                std::cout << "listening ..." << std::endl;
+        }
 
         // accept client connect
         onlineUser = (Connection *)malloc(sizeof(Connection) * _maxConnection);
@@ -49,11 +67,32 @@ initServer()
 }
 
 void*
+Server::
+userHeartBeat(void *arg)
+{
+        Connection *cli = (Connection*)arg;
+        if (cli->beat == 5) {
+                // logout
+                std::cout << "user:" << cli->userName << " no respond will kickout" << std::endl;
+                close(cli->fd);
+        }
+        MsgFormat hbMSG;
+        hbMSG.type = 4;
+        write(cli->fd, &hbMSG, sizeof(MsgFormat));
+        cli->beat++;
+        std::cout << "user:" << cli->userName << " heartBeat +1 ";
+}
+
+void*
 Server::clientHandler(void *arg)
 {
         handlerArg *rarg = (handlerArg *)arg;
         int i = rarg->i;
         Server *srv = rarg->srv;
+
+        // heartbeat
+        Timer heartBeatTimer(1, userHeartBeat, &srv->onlineUser[i]);
+        heartBeatTimer.start();
 
         MsgFormat *msgBuf = (MsgFormat*)malloc(sizeof(MsgFormat));
         int readByte = 0;
@@ -68,18 +107,40 @@ Server::clientHandler(void *arg)
                 switch (msgBuf->type) {
                 case 0:  // register
                         printf("type:%d\n", msgBuf->type);
-                        printf("data:%s\n", msgBuf->data);
+                        printf("data:%s\n", msgBuf->msgContent);
                         // 回显
                         write(srv->onlineUser[i].fd, msgBuf, sizeof(MsgFormat));
+                        break;
 
-                        return nullptr;
+                case 1: {// login
+                        char loginUser[32];
+                        strcpy(loginUser, msgBuf->userName);
+                        char loginPassword[48];
+                        strcpy(loginPassword, msgBuf->userPassword);
+
+                        std::string sqlcmd;
+                        sqlcmd += " select * from userInfo ";
+                        sqlcmd += " where userName = \"";
+                        sqlcmd += loginUser;
+                        sqlcmd += "\" and userPassword = \"";
+                        sqlcmd += loginPassword;
+                        sqlcmd += "\";";
+
+                        mysqlpp::Query loginQuery = srv->_sql.query();
+                        loginQuery << sqlcmd;
+                        mysqlpp::StoreQueryResult res = loginQuery.store();
+
+                        std::cout << "user:" << msgBuf->userName << " login" << std::endl;
                         break;
-                case 1: // login
-                        break;
+                }
                 case 2: // logout
                         break;
-                case 3: //sendMsgToFriend
+                case 3: // sendMsgToFriend
                         break;
+                case 4: { // heartbeat
+                        srv->onlineUser[i].beat = 0;
+                        break;
+                }
                 default:
                         break;
                 }

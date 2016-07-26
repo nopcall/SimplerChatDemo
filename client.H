@@ -16,7 +16,9 @@ struct MsgFormat {
         // 2: logout
         // 3: sendMsgToFriend
         int type;
-        char data[256];
+        char msgContent[256];
+        char userName[32];
+        char userPassword[48];
 };
 
 class Client {

@@ -11,6 +11,10 @@
 
 #include <vector>
 
+#include <mysql++/mysql++.h>
+
+#include "Timer.H"
+
 class Server;
 class Connection;
 class handlerArg;
@@ -22,7 +26,9 @@ struct MsgFormat {
         // 3: sendMsgToFriend
         // 4: heartbeat
         int type;
-        char data[256];
+        char msgContent[256];
+        char userName[32];
+        char userPassword[48];
 };
 
 struct handlerArg {
@@ -30,13 +36,13 @@ struct handlerArg {
         Server *srv;
 };
 
-class Connection {
-public:
+struct Connection {
         int fd;
         pthread_t tid;
         sockaddr_in addr;
         socklen_t addrLen;
         char userName[32];
+        int beat;
 };
 
 class Server {
@@ -50,13 +56,13 @@ public:
 
         // 连接数据库和发送命令
         int sqlConnect();
-        int sqlCmd();
+        int sqlCmd(char *cmd);
 
         // 简单函数
         int userRegister();
         int userLogin();
         int userLogout();
-        int userHeartBeat();
+        static void* userHeartBeat(void *arg);
 
         // 功能
         int getFriendList();
@@ -67,6 +73,12 @@ private:
         short _port;
         int _maxConnection;
         int _connected;
+        // mysql
+        mysqlpp::Connection _sql;
+        char *_sqlAddr;
+        char *_sqlUserName;
+        char *_sqlPassword;
+        char *_databaseName;
 };
 
 #endif /* SERVER_H */

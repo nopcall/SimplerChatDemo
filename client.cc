@@ -19,7 +19,15 @@ outHandler(void *arg)
                         continue;
                 }
 
-                std::cout << msgbuf->data << std::endl;
+                // std::cout << msgbuf->msgContent << std::endl;
+                switch (msgbuf->type) {
+                case 4: {
+                        std::cout << "hearbeat receive" << std::endl;
+                        break;
+                }
+                default:
+                        break;
+                }
 
                 readByte = 0;
                 readLeft = sizeof(MsgFormat) - readByte;
@@ -37,14 +45,11 @@ inHandler(void *arg)
         char buf[256];
 
         // 输出流要更改成按行输入
-        while (true) {
-                scanf("%s", buf);
-
+        while (std::cin >> buf) {
                 struct MsgFormat msg;
-                msg.type = 0;
-                for (int i = 0; i < 256; i++) {
-                        msg.data[i] = buf[i];
-                }
+                msg.type = 1;
+                strcpy(msg.userName, "zhangcheng");
+                strcpy(msg.userPassword, "lueluelue");
 
                 write(srvfd, &msg, sizeof(MsgFormat));
                 memset(buf, 0, 256);
@@ -78,8 +83,8 @@ main(int argc, char *argv[])
         // 服务器回显线程
         pthread_create(&tid[1], NULL, Client::outHandler, (void *)srvfd);
 
-        pthread_join(tid[0], NULL);
         pthread_join(tid[1], NULL);
+        pthread_join(tid[0], NULL);
 
         return 0;
 }

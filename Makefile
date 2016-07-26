@@ -1,5 +1,6 @@
 CC = gcc
-CXXFLAGS = -std=c++11 -l stdc++ -pthread
+CXXFLAGS = -std=c++11 -l stdc++ -pthread -g \
+	-I/usr/include/mysql -I/usr/include/mysql++ -lmysqlpp -lmysqlclient
 
 all: server client
 
@@ -8,8 +9,11 @@ all: server client
 clean:
 	rm *.o
 
-server: server.cc server.H
+server: server.cc server.H Timer.o
 	${CC} ${CXXFLAGS} -o $@ $^
 
 client: client.cc client.H
 	${CC} ${CXXFLAGS} -o $@ $^
+
+Timer.o: Timer.cc Timer.H
+	${CC} ${CXXFLAGS} -c $^
