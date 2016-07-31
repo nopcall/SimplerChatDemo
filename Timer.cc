@@ -9,7 +9,10 @@ _timeThread(void *arg)
         Timer *ptr = (Timer *)arg;
         while (ptr->_running == 1) {
                 sleep(ptr->_time);
-                pthread_cond_signal(&ptr->_cond);
+
+                pthread_cond_signal(&ptr->_condJob);
+
+                pthread_cond_wait(&ptr->_condTime, &ptr->_mutex);
         }
         return NULL;
 }
@@ -23,10 +26,14 @@ _doJob(void *arg)
         std::cout << __FUNCTION__ << std::endl;
 
         while (ptr->_running == 1) {
-                pthread_mutex_lock(&ptr->_mutex);
-                pthread_cond_wait(&ptr->_cond, &ptr->_mutex);
-                ptr->_job(ptr->_jobArg);
-                pthread_mutex_unlock(&ptr->_mutex);
+                pthread_cond_wait(&ptr->_condJob, &ptr->_mutex);
+                if (ptr->_job(ptr->_jobArg)) {
+                        pthread_cond_signal(&ptr->_condTime);
+                        continue;
+                }
+                ptr->_running = 0;
+                std::cout << "Timer stop by callback function request." << std::endl;
+                return NULL;
         }
 
         return NULL;

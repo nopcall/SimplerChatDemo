@@ -75,12 +75,14 @@ userHeartBeat(void *arg)
                 // logout
                 std::cout << "user:" << cli->userName << " no respond will kickout" << std::endl;
                 close(cli->fd);
+                return NULL;
         }
         MsgFormat hbMSG;
         hbMSG.type = 4;
         write(cli->fd, &hbMSG, sizeof(MsgFormat));
         cli->beat++;
-        std::cout << "user:" << cli->userName << " heartBeat +1 ";
+        std::cout << "user:" << cli->userName << " heartBeat +1 " << std::endl;
+        return (void *)1;
 }
 
 void*
@@ -148,6 +150,8 @@ Server::clientHandler(void *arg)
                 readByte = 0;
                 readLeft = sizeof(MsgFormat) - readByte;
         }
+
+        heartBeatTimer.stop();
 
         return NULL;
 }

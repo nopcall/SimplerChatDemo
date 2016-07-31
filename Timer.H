@@ -10,7 +10,8 @@ public:
                 : _time(i), _job(job), _jobArg(jobArg),
                   _running(0),
                   _mutex(PTHREAD_MUTEX_INITIALIZER),
-                  _cond(PTHREAD_COND_INITIALIZER) {}
+                  _condTime(PTHREAD_COND_INITIALIZER),
+                  _condJob(PTHREAD_COND_INITIALIZER) {}
         virtual ~Timer() = default;
 
         void start();
@@ -19,7 +20,7 @@ private:
         static void* _timeThread(void *arg);
         static void* _doJob(void *arg);
         pthread_mutex_t _mutex;
-        pthread_cond_t _cond;
+        pthread_cond_t _condTime, _condJob;
         pthread_t _tidSleep, _tidJob;
         int _time;
         void* (*_job)(void* arg);

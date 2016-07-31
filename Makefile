@@ -15,5 +15,5 @@ server: server.cc server.H Timer.o
 client: client.cc client.H
 	${CC} ${CXXFLAGS} -o $@ $^
 
-Timer.o: Timer.cc Timer.H
+Timer.o: Timer.cc
 	${CC} ${CXXFLAGS} -c $^
