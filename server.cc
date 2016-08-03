@@ -55,15 +55,51 @@ initServer()
         onlineUser = (Connection *)malloc(sizeof(Connection) * _maxConnection);
         memset(onlineUser, 0, sizeof(Connection) * _maxConnection);
 
-        while (onlineUser[_connected].fd =
-               accept(srvfd, (struct sockaddr *)&(onlineUser[_connected].addr),
-                      &onlineUser[_connected].addrLen)) {
-                // 交付给处理线程
-                handlerArg cliArg = {_connected, this};
-                pthread_create(&onlineUser[_connected].tid, NULL, clientHandler, (void*)&cliArg);
-
-                _connected++;
+        // epoll
+        int efd = epoll_create(64);
+        if (efd == -1) {
+                std::cerr << "epoll create error" << std::endl;
+                return;
         }
+
+        struct epoll_event fdevent;
+        fdevent.data.fd = srvfd;
+        fdevent.events = EPOLLIN | EPOLLOUT;
+        epoll_ctl(efd, EPOLL_CTL_ADD, srvfd, &fdevent);
+
+        struct epoll_event *responEvents =
+                (struct epoll_event*)calloc(64, sizeof(struct epoll_event));
+        int respondNum = 0;
+        for ( ;  ;  ) {
+                respondNum = epoll_wait(efd, responEvents, 64, -1);
+                for (int i = 0; i < respondNum; i++) {
+                        if (responEvents[i].data.fd == srvfd) {
+                                onlineUser[_connected].fd =
+                                        accept(srvfd,
+                                               (struct sockaddr *)&(onlineUser[_connected].addr),
+                                               &onlineUser[_connected].addrLen);
+
+                                // 交付给处理线程
+                                handlerArg cliArg = {_connected, this};
+                                pthread_create(&onlineUser[_connected].tid, NULL, clientHandler, (void*)&cliArg);
+
+                                _connected++;
+
+                        }
+
+                }
+        }
+
+
+        // while (onlineUser[_connected].fd =
+        //        accept(srvfd, (struct sockaddr *)&(onlineUser[_connected].addr),
+        //               &onlineUser[_connected].addrLen)) {
+        //         // 交付给处理线程
+        //         handlerArg cliArg = {_connected, this};
+        //         pthread_create(&onlineUser[_connected].tid, NULL, clientHandler, (void*)&cliArg);
+
+        //         _connected++;
+        // }
 }
 
 void*

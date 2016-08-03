@@ -2,12 +2,16 @@
 #define SERVER_H
 
 #include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
 
 // socket头
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include <sys/epoll.h>
 
 #include <vector>
 
